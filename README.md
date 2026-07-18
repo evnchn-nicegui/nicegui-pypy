@@ -45,11 +45,15 @@ breaks new ground rather than mirroring an existing pipeline.
 For every matrix cell — **{PyPy 3.10, PyPy 3.11} × {latest PyPI release, git `main`}** (4 cells):
 
 1. **resolve** — pick the NiceGUI ref (release → matching `v*` tag; `main` → HEAD) and clone it.
-2. **install** — `uv sync` the full dev environment against the chosen PyPy (`uv` respects the PyPy
-   dependency markers automatically). Build failures capture the offending package.
+2. **install** — install the **NiceGUI runtime** into a PyPy venv (`uv pip install`). This is the
+   headline "does it install?" signal; build failures capture the offending package. (Kept separate
+   from the test-env build below so a slow/failing dev-dep build can't hide it.)
 3. **smoke** — `import nicegui`, start a real `ui.run()` server, and HTTP-probe the index page.
-4. **pytest** — run NiceGUI's suite exactly as upstream does (`uv run pytest`, Chrome available on the
-   runner), recording collected / passed / failed / skipped counts.
+4. **pytest** — install a **minimal test harness** (pytest + pytest-selenium/asyncio/order, httpx2,
+   selenium, numpy) and run NiceGUI's own `tests/` suite (Chrome is available on the runner). Heavy
+   optional integration deps (`pandas`, `polars`, `matplotlib`, `plotly`, …) have **no PyPy wheels**,
+   so their test modules are collection-errored and skipped (`--continue-on-collection-errors`) while
+   the rest of the suite runs. Counts are collected / passed / failed / skipped.
 
 A PyPy incompatibility is recorded as **data** (which stage, which dependency, a log tail) — the
 per-cell runner always succeeds, so the workflow's own green/red means "the tracker ran", while the

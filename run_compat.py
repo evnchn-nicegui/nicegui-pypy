@@ -36,11 +36,14 @@ DEP_HINTS = ['pydantic-core', 'pydantic_core', 'watchfiles', 'orjson', 'lxml',
              'polars', 'matplotlib']
 
 # Minimal test harness to run NiceGUI's pytest suite (its config uses
-# --driver Chrome via pytest-selenium and asyncio_mode=auto). Heavy optional
-# integration deps (pandas/polars/matplotlib) are intentionally omitted — they
-# have no PyPy wheels and their tests are recorded as collection errors instead.
-TEST_DEPS = ['pytest', 'pytest-asyncio', 'pytest-selenium', 'selenium',
-             'webdriver-manager', 'requests', 'httpx', 'numpy']
+# --driver Chrome via pytest-selenium, asyncio_mode=auto, pytest.mark.order, and
+# httpx2 for starlette's testclient). Heavy optional integration deps
+# (pandas/polars/matplotlib/plotly/...) are intentionally omitted — they have no
+# PyPy wheels; their test modules are collection-errored and skipped via
+# --continue-on-collection-errors so the rest of the suite still runs.
+TEST_DEPS = ['pytest', 'pytest-asyncio', 'pytest-selenium', 'pytest-order',
+             'selenium', 'webdriver-manager', 'requests', 'httpx', 'httpx2',
+             'numpy']
 
 
 class _Abort(Exception):
@@ -89,8 +92,8 @@ def guess_failed_dep(log):
                 hits.append(dep)
     ordered = []
     for hit in hits:
-        norm = hit.replace('_', '-')
-        if norm not in ordered:
+        norm = hit.replace('_', '-').strip('-.')
+        if len(norm) >= 3 and norm not in ordered:  # drop line-wrap artifacts ("a")
             ordered.append(norm)
     return ', '.join(ordered[:3]) or None
 
@@ -235,7 +238,8 @@ def main():
         result['test_env'] = {'ok': True, 'failed_dep': None, 'detail': 'test harness installed'}
 
         # ---- pytest (NiceGUI's own suite; Chrome is on the runner) ----
-        rc, log = run([py, '-m', 'pytest', '-q', '--color=no', '-p', 'no:cacheprovider'],
+        rc, log = run([py, '-m', 'pytest', '-q', '--color=no', '-p', 'no:cacheprovider',
+                       '--continue-on-collection-errors'],
                       cwd=str(ng), timeout=2700)
         result['pytest'] = {'ok': rc == 0, 'returncode': rc,
                             'counts': parse_pytest(log), 'detail': tail(log, 4000)}
