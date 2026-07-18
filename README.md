@@ -32,8 +32,16 @@ verified 2026-07-19) — it just can't be executed on PyPy.
 ## Latest result
 
 <!-- COMPAT:START -->
-_⏳ Refreshing under the new core-test harness — the next scheduled/triggered run will populate this
-matrix (expected: PyPy 3.11 core ≈ CPython 3.11; PyPy 3.10 install ❌)._
+| Target | NiceGUI | Install | Boot | Core tests |
+|--------|---------|---------|------|------------|
+| `pypy3.10` · pypi | `3.14.0` | ❌ (watchfiles) | — | — |
+| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 173✅ 1❌ 1💥 · **≈ CPython ✓** |
+| CPython 3.11 *(control)* · pypi | `3.14.0` | ✅ | ✅ | 174✅ |
+| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (watchfiles) | — | — |
+| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 183✅ 1❌ 1💥 · **≈ CPython ✓** |
+| CPython 3.11 *(control)* · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 184✅ |
+
+_Last run: 2026-07-18T21:55:05Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own browser-free `user`/unit tests (the full suite, incl. Selenium browser tests, needs pandas/matplotlib/etc. that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset for comparison._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
