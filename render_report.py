@@ -97,8 +97,14 @@ def render_matrix(cells):
 
 
 def make_badge(cells):
-    booted = sum(1 for c in cells.values()
-                 if c.get('install', {}).get('ok') and c.get('smoke', {}).get('ok'))
+    # Count only declared matrix cells, so a stray/foreign JSON can't push the
+    # numerator past the fixed denominator (e.g. an impossible "5/4 boot").
+    booted = 0
+    for pypy in PYPYS:
+        for source in SOURCES:
+            c = cells.get((pypy, source)) or {}
+            if c.get('install', {}).get('ok') and c.get('smoke', {}).get('ok'):
+                booted += 1
     total = len(PYPYS) * len(SOURCES)
     color = 'brightgreen' if booted == total else 'orange' if booted else 'red'
     return {'schemaVersion': 1, 'label': 'pypy compat',
@@ -106,11 +112,16 @@ def make_badge(cells):
 
 
 def splice(readme_text, block):
-    if START in readme_text and END in readme_text:
-        head = readme_text.split(START)[0]
-        tail = readme_text.split(END)[1]
-        return f'{head}{START}\n{block}\n{END}{tail}'
-    return readme_text.rstrip() + f'\n\n{START}\n{block}\n{END}\n'
+    starts, ends = readme_text.count(START), readme_text.count(END)
+    if starts == 0 and ends == 0:  # first run / markerless README: append a block
+        return readme_text.rstrip() + f'\n\n{START}\n{block}\n{END}\n'
+    # Refuse to edit a README whose markers are ambiguous — fail loud rather than
+    # silently dropping content between the wrong pair.
+    if starts != 1 or ends != 1 or readme_text.index(START) > readme_text.index(END):
+        raise SystemExit(f'README compat markers malformed: {starts} START / {ends} END')
+    head = readme_text.split(START, 1)[0]
+    tail = readme_text.split(END, 1)[1]
+    return f'{head}{START}\n{block}\n{END}{tail}'
 
 
 def main():

@@ -159,7 +159,7 @@ def do_smoke(ng: Path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--pypy', required=True, help='e.g. pypy3.10 / pypy3.11')
-    parser.add_argument('--source', required=True, choices=['pypi', 'main'])
+    parser.add_argument('--source', required=True)  # validated inside try (choices would exit pre-JSON)
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
 
@@ -180,6 +180,9 @@ def main():
     ng = workdir / 'nicegui'
     py = venv_python(ng)
     try:
+        if args.source not in ('pypi', 'main'):
+            result['resolve'] = {'ok': False, 'detail': f'invalid --source {args.source!r}'}
+            raise _Abort
         # ---- resolve ref + clone (tests + main source come from git) ----
         if args.source == 'pypi':
             version = latest_pypi_version()
