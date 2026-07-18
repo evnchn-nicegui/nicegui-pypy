@@ -124,14 +124,13 @@ def render_matrix(cells):
             tests = tests_col(cell) + parity_suffix(cells, interp, source)
             rows.append(f'| {row_label} | {ref_txt} | {ic}{idetail} '
                         f'| {boot_col(cell)} | {tests} |')
-    header = ('| Target | NiceGUI | Install | Boot | Pytest (of collected) |\n'
-              '|--------|---------|---------|------|-----------------------|')
+    header = ('| Target | NiceGUI | Install | Boot | Core tests |\n'
+              '|--------|---------|---------|------|------------|')
     stamp = f'\n\n_Last run: {generated or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())} · '
     stamp += 'Install = NiceGUI runtime · Boot = import + server + HTTP probe · '
-    stamp += 'Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib '
-    stamp += 'integration deps omitted — no PyPy wheels). The **CPython 3.11 control** runs the '
-    stamp += 'identical harness — compare its counts to isolate PyPy-specific failures from '
-    stamp += 'harness/ordering artifacts._'
+    stamp += "Core tests = NiceGUI's own browser-free `user`/unit tests (the full suite, incl. "
+    stamp += 'Selenium browser tests, needs pandas/matplotlib/etc. that don\'t run on PyPy — see '
+    stamp += 'README). The **CPython 3.11 control** runs the identical subset for comparison._'
     return header + '\n' + '\n'.join(rows) + stamp
 
 
