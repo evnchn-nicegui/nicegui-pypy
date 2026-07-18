@@ -16,12 +16,12 @@ matrix back into this README.
 <!-- COMPAT:START -->
 | Target | NiceGUI | Install | Boot | Pytest (of collected) |
 |--------|---------|---------|------|-----------------------|
-| `pypy3.10` · pypi | `3.14.0` | ❌ (lxml, httptools, aiohttp) | — | — |
-| `pypy3.11` · pypi | `3.14.0` | — | — | — |
-| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (lxml, httptools, aiohttp) | — | — |
-| `pypy3.11` · main | `main` (`d1cf251711c7`) | — | — | — |
+| `pypy3.10` · pypi | `3.14.0` | ❌ (watchfiles, a) | — | — |
+| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 13💥 |
+| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (pydantic-core, a) | — | — |
+| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 13💥 |
 
-_Last run: 2026-07-18T06:51:03Z · Install = `uv sync` under PyPy · Boot = import + server + HTTP probe · Pytest = upstream `uv run pytest` (browser tests included)._
+_Last run: 2026-07-18T11:36:05Z · Install = NiceGUI runtime under PyPy · Boot = import + server + HTTP probe · Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib integration deps omitted — no PyPy wheels)._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
