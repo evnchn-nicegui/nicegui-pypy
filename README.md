@@ -42,7 +42,7 @@ Closing that gap is [tracked below](#status--roadmap).
 | `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 254✅ 621❌ 11💥 1⏭ · **≈ CPython ✓** |
 | CPython 3.11 *(control)* · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 256✅ 620❌ 11💥 |
 
-_Last run: 2026-07-18T14:00:39Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib integration deps omitted — no PyPy wheels). The **CPython 3.11 control** runs the identical harness — compare its counts to isolate PyPy-specific failures from harness/ordering artifacts._
+_Last run: 2026-07-18T20:21:26Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib integration deps omitted — no PyPy wheels). The **CPython 3.11 control** runs the identical harness — compare its counts to isolate PyPy-specific failures from harness/ordering artifacts._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
