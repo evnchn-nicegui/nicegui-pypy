@@ -14,10 +14,16 @@ import json
 import os
 import time
 
-PYPYS = ['pypy3.10', 'pypy3.11']
+PYPY_TARGETS = ['pypy3.10', 'pypy3.11']
+CONTROLS = ['3.11']  # CPython — comparison baseline; NOT counted in the badge
+INTERPS = PYPY_TARGETS + CONTROLS
 SOURCES = ['pypi', 'main']
 START = '<!-- COMPAT:START -->'
 END = '<!-- COMPAT:END -->'
+
+
+def label(interp):
+    return f'CPython {interp} *(control)*' if interp in CONTROLS else f'`{interp}`'
 
 
 def load(indir):
@@ -72,27 +78,30 @@ def render_matrix(cells):
     generated = None
     rows = []
     for source in SOURCES:
-        for pypy in PYPYS:
-            cell = cells.get((pypy, source))
+        for interp in INTERPS:
+            cell = cells.get((interp, source))
+            row_label = f'{label(interp)} · {source}'
             if cell is None:
-                rows.append(f'| `{pypy}` · {source} | — | — | — | — |')
+                rows.append(f'| {row_label} | — | — | — | — |')
                 continue
             generated = generated or cell.get('generated_at')
             ref = cell.get('nicegui_ref') or '?'
             sha = cell.get('nicegui_sha')
             ref_txt = f'`{ref}`' + (f' (`{sha}`)' if source == 'main' and sha else '')
             if not cell.get('resolve', {}).get('ok', True):
-                rows.append(f'| `{pypy}` · {source} | {ref_txt} | {mark("infra")} resolve | — | — |')
+                rows.append(f'| {row_label} | {ref_txt} | {mark("infra")} resolve | — | — |')
                 continue
             ic, idetail = install_col(cell)
-            rows.append(f'| `{pypy}` · {source} | {ref_txt} | {ic}{idetail} '
+            rows.append(f'| {row_label} | {ref_txt} | {ic}{idetail} '
                         f'| {boot_col(cell)} | {tests_col(cell)} |')
     header = ('| Target | NiceGUI | Install | Boot | Pytest (of collected) |\n'
               '|--------|---------|---------|------|-----------------------|')
     stamp = f'\n\n_Last run: {generated or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())} · '
-    stamp += 'Install = NiceGUI runtime under PyPy · Boot = import + server + HTTP probe · '
+    stamp += 'Install = NiceGUI runtime · Boot = import + server + HTTP probe · '
     stamp += 'Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib '
-    stamp += 'integration deps omitted — no PyPy wheels)._'
+    stamp += 'integration deps omitted — no PyPy wheels). The **CPython 3.11 control** runs the '
+    stamp += 'identical harness — compare its counts to isolate PyPy-specific failures from '
+    stamp += 'harness/ordering artifacts._'
     return header + '\n' + '\n'.join(rows) + stamp
 
 
@@ -100,12 +109,12 @@ def make_badge(cells):
     # Count only declared matrix cells, so a stray/foreign JSON can't push the
     # numerator past the fixed denominator (e.g. an impossible "5/4 boot").
     booted = 0
-    for pypy in PYPYS:
+    for pypy in PYPY_TARGETS:  # control cells are excluded from the badge
         for source in SOURCES:
             c = cells.get((pypy, source)) or {}
             if c.get('install', {}).get('ok') and c.get('smoke', {}).get('ok'):
                 booted += 1
-    total = len(PYPYS) * len(SOURCES)
+    total = len(PYPY_TARGETS) * len(SOURCES)
     color = 'brightgreen' if booted == total else 'orange' if booted else 'red'
     return {'schemaVersion': 1, 'label': 'pypy compat',
             'message': f'{booted}/{total} boot', 'color': color}

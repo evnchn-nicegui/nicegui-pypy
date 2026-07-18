@@ -42,7 +42,10 @@ breaks new ground rather than mirroring an existing pipeline.
 
 ## What each run does
 
-For every matrix cell — **{PyPy 3.10, PyPy 3.11} × {latest PyPI release, git `main`}** (4 cells):
+For every matrix cell — **{PyPy 3.10, PyPy 3.11, CPython 3.11 *(control)*} × {latest PyPI release,
+git `main`}** (6 cells). The **CPython 3.11 control** runs the *identical* harness, so comparing its
+counts against PyPy's separates genuine PyPy-specific failures from harness/ordering artifacts (it is
+**not** counted in the compat badge):
 
 1. **resolve** — pick the NiceGUI ref (release → matching `v*` tag; `main` → HEAD) and clone it.
 2. **install** — install the **NiceGUI runtime** into a PyPy venv (`uv pip install`). This is the

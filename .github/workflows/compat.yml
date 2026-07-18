@@ -26,7 +26,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pypy: ['pypy3.10', 'pypy3.11']
+        # '3.11' (bare) is the CPython 3.11 control — same harness, so its counts
+        # separate PyPy-specific failures from harness/ordering artifacts.
+        pypy: ['pypy3.10', 'pypy3.11', '3.11']
         source: ['pypi', 'main']
     steps:
       - uses: actions/checkout@v4
