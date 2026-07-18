@@ -1,0 +1,9 @@
+# agent-harness config (local only; not part of the public project)
+.claude/
+
+# transient run outputs
+results/
+artifacts/
+__pycache__/
+*.pyc
+.venv/
