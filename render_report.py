@@ -50,11 +50,15 @@ def boot_col(cell):
     return mark('ok') if ok is True else mark('fail') if ok is False else mark('na')
 
 
-def pytest_col(cell):
-    pt = cell.get('pytest', {})
-    counts = pt.get('counts') or {}
+def tests_col(cell):
+    # Test-harness install must succeed before pytest can run.
+    te = cell.get('test_env', {})
+    if te.get('ok') is False:
+        dep = te.get('failed_dep')
+        return 'test-deps ' + mark('fail') + (f' ({dep})' if dep else '')
+    counts = (cell.get('pytest', {}) or {}).get('counts') or {}
     if not counts:
-        return '—'
+        return mark('na')
     collected = counts.get('collected')
     parts = []
     for key, glyph in (('passed', '✅'), ('failed', '❌'), ('error', '💥'), ('skipped', '⏭')):
@@ -82,12 +86,13 @@ def render_matrix(cells):
                 continue
             ic, idetail = install_col(cell)
             rows.append(f'| `{pypy}` · {source} | {ref_txt} | {ic}{idetail} '
-                        f'| {boot_col(cell)} | {pytest_col(cell)} |')
+                        f'| {boot_col(cell)} | {tests_col(cell)} |')
     header = ('| Target | NiceGUI | Install | Boot | Pytest (of collected) |\n'
               '|--------|---------|---------|------|-----------------------|')
     stamp = f'\n\n_Last run: {generated or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())} · '
-    stamp += 'Install = `uv sync` under PyPy · Boot = import + server + HTTP probe · '
-    stamp += 'Pytest = upstream `uv run pytest` (browser tests included)._'
+    stamp += 'Install = NiceGUI runtime under PyPy · Boot = import + server + HTTP probe · '
+    stamp += 'Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib '
+    stamp += 'integration deps omitted — no PyPy wheels)._'
     return header + '\n' + '\n'.join(rows) + stamp
 
 

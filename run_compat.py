@@ -2,18 +2,20 @@
 """Probe NiceGUI compatibility under PyPy for ONE matrix cell.
 
 Runs on the CI runner's own CPython and drives `uv` to build a PyPy environment,
-then exercises NiceGUI in stages: resolve -> install -> smoke -> pytest.
+then exercises NiceGUI in decoupled stages so a slow/failing test-env build never
+hides the headline "does it install and boot" signal:
 
-It ALWAYS writes a structured JSON result and exits 0. A PyPy incompatibility is
-recorded as *data* (which stage failed, which dependency, a log tail), never a
-bare red X. The workflow only goes red on genuine infrastructure faults.
+    resolve -> install (NiceGUI runtime) -> smoke -> test-env -> pytest
 
-Stdlib only, so it runs regardless of what is installed.
+Each stage records structured results; the script ALWAYS writes JSON and exits 0.
+A PyPy incompatibility is *data* (which stage, which dependency, a log tail), never
+a bare red X. Stdlib only.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -27,24 +29,39 @@ NICEGUI_REPO = 'https://github.com/zauberzeug/nicegui.git'
 PYPI_JSON = 'https://pypi.org/pypi/nicegui/json'
 SMOKE_PORT = 8099
 
-# Dependencies most likely to decide PyPy compat (Rust/pyo3/C-ext).
+# Deps that decide PyPy compat (Rust/pyo3/C-ext) — used to attribute build failures.
 DEP_HINTS = ['pydantic-core', 'pydantic_core', 'watchfiles', 'orjson', 'lxml',
              'uvloop', 'httptools', 'greenlet', 'cffi', 'numpy', 'pillow',
-             'aiohttp', 'selenium', 'maturin']
+             'aiohttp', 'rpds-py', 'rpds_py', 'selenium', 'maturin', 'pandas',
+             'polars', 'matplotlib']
+
+# Minimal test harness to run NiceGUI's pytest suite (its config uses
+# --driver Chrome via pytest-selenium and asyncio_mode=auto). Heavy optional
+# integration deps (pandas/polars/matplotlib) are intentionally omitted — they
+# have no PyPy wheels and their tests are recorded as collection errors instead.
+TEST_DEPS = ['pytest', 'pytest-asyncio', 'pytest-selenium', 'selenium',
+             'webdriver-manager', 'requests', 'httpx', 'numpy']
 
 
 class _Abort(Exception):
-    """Raised to short-circuit a failed stage; the result is still written."""
+    """Short-circuit a failed stage; the result is still written."""
 
 
-def run(cmd, cwd=None, timeout=None):
+def run(cmd, cwd=None, timeout=None, env=None):
     """Run a command, capture combined stdout+stderr, never raise on non-zero."""
+    full_env = None
+    if env:
+        full_env = dict(os.environ)
+        full_env.update(env)
     try:
-        proc = subprocess.run(cmd, cwd=cwd, timeout=timeout, text=True,
+        proc = subprocess.run(cmd, cwd=cwd, timeout=timeout, text=True, env=full_env,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return proc.returncode, proc.stdout or ''
     except subprocess.TimeoutExpired as exc:
-        return 124, (exc.output or '') + f'\n[TIMEOUT after {timeout}s]'
+        out = exc.output or ''
+        if isinstance(out, bytes):  # text=True still yields bytes on timeout kill
+            out = out.decode('utf-8', 'replace')
+        return 124, out + f'\n[TIMEOUT after {timeout}s]'
     except FileNotFoundError as exc:
         return 127, f'[command not found: {exc}]'
 
@@ -59,55 +76,58 @@ def latest_pypi_version():
 
 
 def guess_failed_dep(log):
-    """Best-effort extraction of the dependency that failed to build/install."""
+    """Best-effort: the dependency uv reported as failing to build."""
     low = (log or '').lower()
     hits = []
-    for dep in DEP_HINTS:
-        near = re.escape(dep) + r'.{0,80}(failed|error|no\s+wheel|not\s+supported|unsupported)'
-        pre = r'(failed to build|building|error).{0,80}' + re.escape(dep)
-        if re.search(near, low) or re.search(pre, low):
-            hits.append(dep)
+    # uv's own phrasing is the most reliable signal.
     for match in re.findall(r'failed to build[`\' ]+([a-z0-9_.\-]+)', low):
         hits.append(match)
+    if not hits:
+        for dep in DEP_HINTS:
+            near = re.escape(dep) + r'.{0,80}(failed|error|no\s+wheel|not\s+supported)'
+            if re.search(near, low):
+                hits.append(dep)
     ordered = []
     for hit in hits:
         norm = hit.replace('_', '-')
         if norm not in ordered:
             ordered.append(norm)
-    return ', '.join(ordered[:4]) or None
+    return ', '.join(ordered[:3]) or None
 
 
 def parse_pytest(log):
-    """Pull collected/passed/failed/skipped/error counts from pytest output."""
     counts = {}
     match = re.search(r'collected (\d+) item', log or '')
     if match:
         counts['collected'] = int(match.group(1))
-    for kind in ['passed', 'failed', 'skipped', 'error', 'errors',
-                 'xfailed', 'xpassed', 'deselected']:
+    for kind in ['passed', 'failed', 'skipped', 'error', 'errors', 'xfailed',
+                 'xpassed', 'deselected']:
         found = re.findall(r'(\d+)\s+' + kind + r'\b', log or '')
         if found:
             counts['error' if kind == 'errors' else kind] = int(found[-1])
     return counts
 
 
+def venv_python(ng: Path) -> str:
+    return str(ng / '.venv' / 'bin' / 'python')
+
+
 def do_smoke(ng: Path):
     """import nicegui, boot a real server, HTTP-probe the index page."""
-    rc, log = run(['uv', 'run', 'python', '-c',
-                   "import nicegui; print('NG', nicegui.__version__)"],
+    py = venv_python(ng)
+    rc, log = run([py, '-c', "import nicegui; print('NG', nicegui.__version__)"],
                   cwd=str(ng), timeout=300)
     if rc != 0:
         return False, 'import failed: ' + tail(log, 1200)
 
-    app = ng / '_smoke_app.py'
-    app.write_text(
+    (ng / '_smoke_app.py').write_text(
         'from nicegui import ui\n'
         "@ui.page('/')\n"
         'def index():\n'
         "    ui.label('ngpypy-smoke-ok')\n"
         f'ui.run(port={SMOKE_PORT}, show=False, reload=False)\n')
 
-    proc = subprocess.Popen(['uv', 'run', 'python', '_smoke_app.py'], cwd=str(ng),
+    proc = subprocess.Popen([py, '_smoke_app.py'], cwd=str(ng),
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         detail = 'no response within timeout'
@@ -149,13 +169,15 @@ def main():
         'resolve': {'ok': None, 'detail': None},
         'install': {'ok': None, 'detail': None, 'failed_dep': None},
         'smoke': {'ok': None, 'detail': None},
+        'test_env': {'ok': None, 'detail': None, 'failed_dep': None},
         'pytest': {'ok': None, 'detail': None, 'counts': {}},
     }
 
     workdir = Path(tempfile.mkdtemp(prefix='ngpypy-'))
     ng = workdir / 'nicegui'
+    py = venv_python(ng)
     try:
-        # ---- resolve ref ----
+        # ---- resolve ref + clone (tests + main source come from git) ----
         if args.source == 'pypi':
             version = latest_pypi_version()
             ref = f'v{version}'
@@ -172,7 +194,7 @@ def main():
         result['nicegui_sha'] = sha.strip()[:12]
         result['resolve'] = {'ok': True, 'detail': ref}
 
-        # ---- install PyPy + full dev env via uv ----
+        # ---- provision PyPy + venv ----
         rc, log = run(['uv', 'python', 'install', args.pypy], timeout=600)
         if rc != 0:
             result['install'] = {'ok': False, 'failed_dep': None,
@@ -183,19 +205,37 @@ def main():
             result['install'] = {'ok': False, 'failed_dep': None,
                                  'detail': 'uv venv failed: ' + tail(log, 1500)}
             raise _Abort
-        rc, log = run(['uv', 'sync', '--python', args.pypy], cwd=str(ng), timeout=1800)
+
+        # ---- install NiceGUI runtime (the "does it install?" signal) ----
+        if args.source == 'pypi':
+            spec = [f'nicegui=={result["nicegui_ref"]}']
+            env = None
+        else:
+            spec = ['.']  # build main from the clone
+            env = {'POETRY_DYNAMIC_VERSIONING_BYPASS': '0.0.0'}  # shallow clone has no tags
+        rc, log = run(['uv', 'pip', 'install', '--python', py] + spec,
+                      cwd=str(ng), timeout=2400, env=env)
         if rc != 0:
             result['install'] = {'ok': False, 'failed_dep': guess_failed_dep(log),
                                  'detail': tail(log, 3000)}
             raise _Abort
-        result['install'] = {'ok': True, 'failed_dep': None, 'detail': 'uv sync ok'}
+        result['install'] = {'ok': True, 'failed_dep': None, 'detail': 'runtime installed'}
 
         # ---- smoke ----
         ok, detail = do_smoke(ng)
         result['smoke'] = {'ok': ok, 'detail': detail}
 
-        # ---- pytest (mirrors upstream `uv run pytest`; Chrome is on the runner) ----
-        rc, log = run(['uv', 'run', 'pytest', '-q', '--color=no', '-p', 'no:cacheprovider'],
+        # ---- test-env install (harness only; heavy integration deps omitted) ----
+        rc, log = run(['uv', 'pip', 'install', '--python', py] + TEST_DEPS,
+                      cwd=str(ng), timeout=2400)
+        if rc != 0:
+            result['test_env'] = {'ok': False, 'failed_dep': guess_failed_dep(log),
+                                  'detail': tail(log, 2500)}
+            raise _Abort
+        result['test_env'] = {'ok': True, 'failed_dep': None, 'detail': 'test harness installed'}
+
+        # ---- pytest (NiceGUI's own suite; Chrome is on the runner) ----
+        rc, log = run([py, '-m', 'pytest', '-q', '--color=no', '-p', 'no:cacheprovider'],
                       cwd=str(ng), timeout=2700)
         result['pytest'] = {'ok': rc == 0, 'returncode': rc,
                             'counts': parse_pytest(log), 'detail': tail(log, 4000)}
@@ -208,8 +248,8 @@ def main():
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=2))
         shutil.rmtree(workdir, ignore_errors=True)
-        summary = {k: result[k] for k in ('pypy', 'source', 'resolve', 'install', 'smoke', 'pytest')}
-        print(json.dumps(summary, indent=2, default=str)[:2500])
+        keys = ('pypy', 'source', 'resolve', 'install', 'smoke', 'test_env', 'pytest')
+        print(json.dumps({k: result[k] for k in keys}, indent=2, default=str)[:2500])
     sys.exit(0)
 
 
