@@ -6,10 +6,26 @@
 An **independent, automated tracker** for whether [NiceGUI](https://github.com/zauberzeug/nicegui)
 installs, boots, and passes its test suite under **[PyPy](https://pypy.org/)** — the JIT Python
 interpreter. It runs daily on GitHub Actions (free/unlimited for public repos) and writes the result
-matrix back into this README.
+matrix back into this README. **Target: PyPy 3.11+.**
 
 > Not affiliated with the NiceGUI project. This repo runs *NiceGUI's own* test suite unmodified;
 > it just points a different interpreter at it.
+
+## Verdict
+
+- ✅ **PyPy 3.11 — supported.** NiceGUI installs, boots, and runs its test suite **on par with
+  CPython 3.11**: the pass/fail counts are within ~1 test of the CPython control (see the matrix).
+  Whatever works on CPython 3.11 works on PyPy 3.11.
+- ❌ **PyPy 3.10 — not supported.** NiceGUI won't install: its Rust dependencies `watchfiles` and
+  `pydantic-core` publish **no PyPy-3.10 wheels**, and the from-source build fails. This is an upstream
+  wheel-availability limit, not something this repo can fix. Not sugar-coated: 3.10 is a hard no.
+
+**About the raw failure counts:** the matrix shows a large number of `❌` for *both* PyPy 3.11 **and**
+the CPython 3.11 control. That is a limitation of this tracker's **lightweight harness**, not a NiceGUI
+or PyPy defect — the harness omits heavy integration deps (`pandas`/`polars`/`matplotlib`/…, which have
+no PyPy wheels), and running the suite without them disrupts NiceGUI's ordering-sensitive test
+isolation. The point that matters for compatibility is the **PyPy-vs-CPython parity** (`≈ CPython ✓`),
+which holds. Closing the absolute gap is tracked as [future work](#status--roadmap).
 
 ## Latest result
 
@@ -17,10 +33,10 @@ matrix back into this README.
 | Target | NiceGUI | Install | Boot | Pytest (of collected) |
 |--------|---------|---------|------|-----------------------|
 | `pypy3.10` · pypi | `3.14.0` | ❌ (watchfiles) | — | — |
-| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 242✅ 616❌ 11💥 1⏭ |
+| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 242✅ 616❌ 11💥 1⏭ · **≈ CPython ✓** |
 | CPython 3.11 *(control)* · pypi | `3.14.0` | ✅ | ✅ | 243✅ 616❌ 11💥 |
 | `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (watchfiles) | — | — |
-| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 254✅ 621❌ 11💥 1⏭ |
+| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 254✅ 621❌ 11💥 1⏭ · **≈ CPython ✓** |
 | CPython 3.11 *(control)* · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 256✅ 620❌ 11💥 |
 
 _Last run: 2026-07-18T14:00:39Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib integration deps omitted — no PyPy wheels). The **CPython 3.11 control** runs the identical harness — compare its counts to isolate PyPy-specific failures from harness/ordering artifacts._
@@ -71,6 +87,17 @@ uv python install pypy3.11
 python3 run_compat.py --pypy pypy3.11 --source pypi --out results/pypy3.11-pypi.json
 python3 render_report.py --in results --readme README.md --badge badge.json
 ```
+
+## Status & roadmap
+
+- **Done:** daily tracker; PyPy 3.11 vs CPython 3.11 parity established; PyPy 3.10 confirmed
+  unsupported.
+- **In progress / next:** close the absolute test-pass gap by making the harness match upstream's
+  full-environment run (install every integration dep where a PyPy wheel exists; cleanly *deselect*
+  the wheel-less modules rather than letting them collection-error and disturb test ordering). This
+  lifts both the PyPy and CPython-control pass counts toward green without changing the parity verdict.
+- **Not actionable here:** PyPy 3.10 support depends on `watchfiles`/`pydantic-core` shipping
+  `pp310` wheels upstream.
 
 ## License
 

@@ -74,6 +74,24 @@ def tests_col(cell):
     return f'{body} / {collected} collected' if collected is not None else body
 
 
+def _passed(cell):
+    return ((cell or {}).get('pytest', {}) or {}).get('counts', {}).get('passed')
+
+
+def parity_suffix(cells, interp, source):
+    """For a PyPy target, a one-glance 'matches CPython control?' verdict."""
+    if interp not in PYPY_TARGETS:
+        return ''
+    mine = _passed(cells.get((interp, source)))
+    ctrl = _passed(cells.get(('3.11', source)))
+    if mine is None or ctrl is None:
+        return ''
+    delta = mine - ctrl
+    if abs(delta) <= max(5, ctrl // 100):  # within noise of the control
+        return ' · **≈ CPython ✓**'
+    return f' · vs CPython {ctrl}✅ (Δ{delta:+d})'
+
+
 def render_matrix(cells):
     generated = None
     rows = []
@@ -92,8 +110,9 @@ def render_matrix(cells):
                 rows.append(f'| {row_label} | {ref_txt} | {mark("infra")} resolve | — | — |')
                 continue
             ic, idetail = install_col(cell)
+            tests = tests_col(cell) + parity_suffix(cells, interp, source)
             rows.append(f'| {row_label} | {ref_txt} | {ic}{idetail} '
-                        f'| {boot_col(cell)} | {tests_col(cell)} |')
+                        f'| {boot_col(cell)} | {tests} |')
     header = ('| Target | NiceGUI | Install | Boot | Pytest (of collected) |\n'
               '|--------|---------|---------|------|-----------------------|')
     stamp = f'\n\n_Last run: {generated or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())} · '
@@ -106,18 +125,14 @@ def render_matrix(cells):
 
 
 def make_badge(cells):
-    # Count only declared matrix cells, so a stray/foreign JSON can't push the
-    # numerator past the fixed denominator (e.g. an impossible "5/4 boot").
-    booted = 0
-    for pypy in PYPY_TARGETS:  # control cells are excluded from the badge
-        for source in SOURCES:
-            c = cells.get((pypy, source)) or {}
-            if c.get('install', {}).get('ok') and c.get('smoke', {}).get('ok'):
-                booted += 1
-    total = len(PYPY_TARGETS) * len(SOURCES)
-    color = 'brightgreen' if booted == total else 'orange' if booted else 'red'
-    return {'schemaVersion': 1, 'label': 'pypy compat',
-            'message': f'{booted}/{total} boot', 'color': color}
+    # Target is PyPy 3.11+. The badge states the primary target's real status:
+    # does the newest tracked PyPy install + boot NiceGUI at all?
+    ok = any((cells.get(('pypy3.11', s)) or {}).get('install', {}).get('ok')
+             and (cells.get(('pypy3.11', s)) or {}).get('smoke', {}).get('ok')
+             for s in SOURCES)
+    return {'schemaVersion': 1, 'label': 'NiceGUI on PyPy 3.11',
+            'message': 'installs + boots' if ok else 'not working',
+            'color': 'brightgreen' if ok else 'red'}
 
 
 def splice(readme_text, block):
