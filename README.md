@@ -14,8 +14,14 @@ matrix back into this README.
 ## Latest result
 
 <!-- COMPAT:START -->
-_No run has completed yet. Trigger the **compat** workflow (Actions → compat → Run workflow), or wait
-for the daily 06:00 UTC run._
+| Target | NiceGUI | Install | Boot | Pytest (of collected) |
+|--------|---------|---------|------|-----------------------|
+| `pypy3.10` · pypi | `3.14.0` | ❌ (lxml, httptools, aiohttp) | — | — |
+| `pypy3.11` · pypi | `3.14.0` | — | — | — |
+| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (lxml, httptools, aiohttp) | — | — |
+| `pypy3.11` · main | `main` (`d1cf251711c7`) | — | — | — |
+
+_Last run: 2026-07-18T06:51:03Z · Install = `uv sync` under PyPy · Boot = import + server + HTTP probe · Pytest = upstream `uv run pytest` (browser tests included)._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
