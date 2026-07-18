@@ -62,8 +62,8 @@ def tests_col(cell):
     if te.get('ok') is False:
         dep = te.get('failed_dep')
         return 'test-deps ' + mark('fail') + (f' ({dep})' if dep else '')
-    counts = (cell.get('pytest', {}) or {}).get('counts') or {}
-    if not counts:
+    counts = (cell.get('pytest', {}) or {}).get('counts')
+    if not isinstance(counts, dict) or not counts:
         return mark('na')
     collected = counts.get('collected')
     parts = []
@@ -74,22 +74,33 @@ def tests_col(cell):
     return f'{body} / {collected} collected' if collected is not None else body
 
 
-def _passed(cell):
-    return ((cell or {}).get('pytest', {}) or {}).get('counts', {}).get('passed')
+def _counts(cell):
+    c = ((cell or {}).get('pytest', {}) or {}).get('counts')
+    return c if isinstance(c, dict) else {}
 
 
 def parity_suffix(cells, interp, source):
-    """For a PyPy target, a one-glance 'matches CPython control?' verdict."""
+    """For a PyPy target, a one-glance 'matches CPython control?' verdict.
+
+    Parity requires passed AND failed AND error counts to all be within noise of
+    the control — not just the passed count (a close pass count with diverging
+    failures would otherwise be mislabelled a match).
+    """
     if interp not in PYPY_TARGETS:
         return ''
-    mine = _passed(cells.get((interp, source)))
-    ctrl = _passed(cells.get(('3.11', source)))
-    if mine is None or ctrl is None:
+    mine, ctrl = _counts(cells.get((interp, source))), _counts(cells.get(('3.11', source)))
+    if 'passed' not in mine or 'passed' not in ctrl:
         return ''
-    delta = mine - ctrl
-    if abs(delta) <= max(5, ctrl // 100):  # within noise of the control
+
+    def close(key):
+        a, b = mine.get(key, 0), ctrl.get(key, 0)
+        return abs(a - b) <= max(5, b // 100)
+
+    if all(close(k) for k in ('passed', 'failed', 'error')):
         return ' · **≈ CPython ✓**'
-    return f' · vs CPython {ctrl}✅ (Δ{delta:+d})'
+    dp = mine.get('passed', 0) - ctrl.get('passed', 0)
+    return (f' · vs CPython {ctrl.get("passed", 0)}✅/{ctrl.get("failed", 0)}❌ '
+            f'(Δpass {dp:+d})')
 
 
 def render_matrix(cells):
@@ -125,9 +136,9 @@ def render_matrix(cells):
 
 
 def make_badge(cells):
-    # Target is PyPy 3.11+. The badge states the primary target's real status:
-    # does the newest tracked PyPy install + boot NiceGUI at all?
-    ok = any((cells.get(('pypy3.11', s)) or {}).get('install', {}).get('ok')
+    # Target is PyPy 3.11+. Green only if the newest tracked PyPy installs + boots
+    # on BOTH sources (release and main) — a partial (one source) pass is not green.
+    ok = all((cells.get(('pypy3.11', s)) or {}).get('install', {}).get('ok')
              and (cells.get(('pypy3.11', s)) or {}).get('smoke', {}).get('ok')
              for s in SOURCES)
     return {'schemaVersion': 1, 'label': 'NiceGUI on PyPy 3.11',

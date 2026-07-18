@@ -3,29 +3,32 @@
 [![compat](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/evnchn-nicegui/nicegui-pypy/main/badge.json)](https://github.com/evnchn-nicegui/nicegui-pypy/actions/workflows/compat.yml)
 [![tracker](https://github.com/evnchn-nicegui/nicegui-pypy/actions/workflows/compat.yml/badge.svg)](https://github.com/evnchn-nicegui/nicegui-pypy/actions/workflows/compat.yml)
 
-An **independent, automated tracker** for whether [NiceGUI](https://github.com/zauberzeug/nicegui)
-installs, boots, and passes its test suite under **[PyPy](https://pypy.org/)** — the JIT Python
-interpreter. It runs daily on GitHub Actions (free/unlimited for public repos) and writes the result
-matrix back into this README. **Target: PyPy 3.11+.**
+An **independent, automated tracker** that checks whether [NiceGUI](https://github.com/zauberzeug/nicegui)
+installs and boots under **[PyPy](https://pypy.org/)** — the JIT Python interpreter — and compares its
+test-suite results under PyPy against a **CPython control** run the same way. It runs daily on GitHub
+Actions (free/unlimited for public repos) and writes the result matrix back into this README.
+**Target: PyPy 3.11+.**
 
-> Not affiliated with the NiceGUI project. This repo runs *NiceGUI's own* test suite unmodified;
-> it just points a different interpreter at it.
+> Not affiliated with the NiceGUI project. It runs *NiceGUI's own* test files unmodified — but in a
+> **reduced environment** (see the caveat below), so absolute pass/fail counts are not upstream-CI-grade.
 
 ## Verdict
 
-- ✅ **PyPy 3.11 — supported.** NiceGUI installs, boots, and runs its test suite **on par with
-  CPython 3.11**: the pass/fail counts are within ~1 test of the CPython control (see the matrix).
-  Whatever works on CPython 3.11 works on PyPy 3.11.
-- ❌ **PyPy 3.10 — not supported.** NiceGUI won't install: its Rust dependencies `watchfiles` and
-  `pydantic-core` publish **no PyPy-3.10 wheels**, and the from-source build fails. This is an upstream
-  wheel-availability limit, not something this repo can fix. Not sugar-coated: 3.10 is a hard no.
+- ✅ **PyPy 3.11 — installs + boots; no PyPy-specific regression detected.** NiceGUI installs and boots
+  cleanly, and its test results **match the CPython 3.11 control within noise** (`≈ CPython ✓` in the
+  matrix). **Caveat, stated up front:** the full suite does **not** pass here — ~616 tests fail on
+  *both* PyPy 3.11 **and** the CPython control (see below). So this is a **parity signal** (PyPy behaves
+  like CPython), **not** a full "supported / suite-green" certification.
+- ❌ **PyPy 3.10 — does not install.** The install fails at `watchfiles` (no PyPy-3.10 wheel, source
+  build fails); `pydantic-core` also ships no `pp310` wheels. This is an upstream wheel-availability
+  limit, not something this repo can fix. Not sugar-coated: 3.10 is a hard no.
 
-**About the raw failure counts:** the matrix shows a large number of `❌` for *both* PyPy 3.11 **and**
-the CPython 3.11 control. That is a limitation of this tracker's **lightweight harness**, not a NiceGUI
-or PyPy defect — the harness omits heavy integration deps (`pandas`/`polars`/`matplotlib`/…, which have
-no PyPy wheels), and running the suite without them disrupts NiceGUI's ordering-sensitive test
-isolation. The point that matters for compatibility is the **PyPy-vs-CPython parity** (`≈ CPython ✓`),
-which holds. Closing the absolute gap is tracked as [future work](#status--roadmap).
+**Why the failure counts are high (on both interpreters):** this tracker uses a **lightweight harness**
+that omits heavy integration deps (`pandas`/`polars`/`matplotlib`/…, which have no PyPy wheels); running
+the suite without them (plus `--continue-on-collection-errors`) disrupts NiceGUI's ordering-sensitive
+test isolation. Because the CPython control degrades **identically**, the failures are a harness
+artifact rather than a PyPy defect — but the suite genuinely does not pass in this environment.
+Closing that gap is [tracked below](#status--roadmap).
 
 ## Latest result
 
