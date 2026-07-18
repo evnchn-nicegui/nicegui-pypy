@@ -21,7 +21,7 @@ matrix back into this README.
 | `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (watchfiles) | — | — |
 | `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 254✅ 621❌ 11💥 1⏭ |
 
-_Last run: 2026-07-18T11:40:19Z · Install = NiceGUI runtime under PyPy · Boot = import + server + HTTP probe · Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib integration deps omitted — no PyPy wheels)._
+_Last run: 2026-07-18T12:30:28Z · Install = NiceGUI runtime under PyPy · Boot = import + server + HTTP probe · Pytest = NiceGUI suite via a minimal harness (heavy pandas/polars/matplotlib integration deps omitted — no PyPy wheels)._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
