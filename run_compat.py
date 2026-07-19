@@ -35,16 +35,12 @@ DEP_HINTS = ['pydantic-core', 'pydantic_core', 'watchfiles', 'orjson', 'lxml',
              'aiohttp', 'rpds-py', 'rpds_py', 'selenium', 'maturin', 'pandas',
              'polars', 'matplotlib']
 
-# Minimal test harness to run NiceGUI's pytest suite (its config uses
-# --driver Chrome via pytest-selenium, asyncio_mode=auto, pytest.mark.order, and
-# httpx2 for starlette's testclient). Heavy optional integration deps
-# (pandas/polars/matplotlib/plotly/...) are intentionally omitted — they have no
-# PyPy wheels; their test modules are collection-errored and skipped via
-# --continue-on-collection-errors so the rest of the suite still runs.
-# Deps for the browser-free core subset (pytest-selenium/selenium are needed only
-# so the repo's `--driver Chrome` addopt parses — no browser is actually launched).
+# Test harness for the core subset. pytest-selenium/selenium/webdriver-manager
+# drive the real Chrome browser tests (the repo's config sets `--driver Chrome`);
+# httpx2 is what starlette's testclient wants; pytest-order for the suite's marks.
 TEST_DEPS = ['pytest', 'pytest-asyncio', 'pytest-order', 'pytest-selenium',
-             'selenium', 'webdriver-manager', 'requests', 'httpx', 'httpx2', 'numpy']
+             'selenium', 'webdriver-manager', 'requests', 'httpx', 'httpx2', 'numpy',
+             'html-sanitizer']  # test_html.py imports it; pure-Python, PyPy-safe
 
 # Curated subset of NiceGUI's own tests that runs on PyPy: real Selenium/Chrome
 # **browser** tests (the `screen` fixture — the whole point: the browser side is
