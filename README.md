@@ -38,7 +38,16 @@ pytest`, CPython 3.11, verified 2026-07-19).
 ## Latest result
 
 <!-- COMPAT:START -->
-_⏳ Refreshing — 3 CPython-only tests now deselected (fix proposed [#210](https://github.com/evnchn/nicegui/pull/210)); next run will populate (expected: PyPy 3.11 ≈ CPython, both green)._
+| Target | NiceGUI | Install | Boot | Core tests |
+|--------|---------|---------|------|------------|
+| `pypy3.10` · pypi | `3.14.0` | ❌ (watchfiles) | — | — |
+| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 314✅ 1❌ · **≈ CPython ✓** |
+| CPython 3.11 *(control)* · pypi | `3.14.0` | ✅ | ✅ | 315✅ |
+| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (watchfiles) | — | — |
+| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 324✅ 1❌ · **≈ CPython ✓** |
+| CPython 3.11 *(control)* · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 325✅ |
+
+_Last run: 2026-07-19T13:29:38Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
