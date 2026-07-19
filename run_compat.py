@@ -62,6 +62,19 @@ CORE_TESTS = [
     'tests/test_user_simulation.py',
 ]
 
+# Tests that assert CPython-ONLY semantics — they cannot pass on PyPy by design:
+# the two cyclic-reference tests rely on CPython refcounting to free acyclic
+# garbage synchronously (PyPy has no refcounting), and the pickle test asserts
+# CPython's exact pickling-error wording. A fix is proposed upstream
+# (evnchn/nicegui#210: skipif-PyPy + a wider regex). Deselected on BOTH
+# interpreters so the matrix compares portable behaviour apples-to-apples;
+# this self-heals to running them once the upstream fix lands.
+DESELECT = [
+    'tests/test_element.py::test_no_cyclic_references_when_deleting_elements',
+    'tests/test_element.py::test_no_cyclic_references_when_deleting_clients',
+    'tests/test_run.py::test_run_unpickable_exception_in_cpu_bound_callback',
+]
+
 
 class _Abort(Exception):
     """Short-circuit a failed stage; the result is still written."""
@@ -261,10 +274,14 @@ def main():
         # (The full suite needs pandas/matplotlib/etc. that can't run on PyPy; run
         # what genuinely runs, deterministically, rather than a broken partial run.)
         tests = [t for t in CORE_TESTS if (ng / t).is_file()]
+        deselect = []
+        for item in DESELECT:
+            deselect += ['--deselect', item]
         rc, log = run([py, '-m', 'pytest', '-q', '--color=no', '-p', 'no:cacheprovider']
-                      + tests, cwd=str(ng), timeout=900)
-        result['pytest'] = {'ok': rc == 0, 'returncode': rc, 'suite': 'browser-free core subset',
-                            'counts': parse_pytest(log), 'detail': tail(log, 4000)}
+                      + deselect + tests, cwd=str(ng), timeout=900)
+        result['pytest'] = {'ok': rc == 0, 'returncode': rc, 'suite': 'browser + user core subset',
+                            'counts': parse_pytest(log), 'deselected_cpython_only': DESELECT,
+                            'detail': tail(log, 4000)}
     except _Abort:
         pass
     except Exception as exc:  # noqa: BLE001 - record anything unexpected

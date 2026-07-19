@@ -16,33 +16,29 @@ writes the matrix back into this README. **Target: PyPy 3.11+.**
 - ✅ **PyPy 3.11 — works, browser included.** NiceGUI installs, boots, and passes its core test subset
   — **real Selenium/Chrome browser tests** (the whole point: the rendered Vue/socket.io side is
   exercised, not just Python-simulated) plus `user`/unit tests — **at parity with CPython 3.11**
-  (`≈ CPython ✓`). The only differences are a **handful of genuine PyPy semantics**: PyPy has no
-  refcounting, so a couple of "object is collected immediately after delete" tests don't hold, and a
-  `pickle` error message is worded differently. No functional rendering regression.
+  (`≈ CPython ✓`). No functional rendering regression.
 - ❌ **PyPy 3.10 — does not install.** Install fails at `watchfiles` (no PyPy-3.10 wheel, source build
   fails); `pydantic-core` also ships no `pp310` wheels. Upstream wheel-availability limit, not fixable
   here. Not sugar-coated: 3.10 is a hard no.
 
-**Scope — honestly, what is and isn't covered.** The subset covers NiceGUI's core browser element
-rendering + Python API. It does **not** cover the whole suite: a few test modules need
-`pandas`/`matplotlib`/`altair` (which `segfault`/don't install on PyPy), and NiceGUI's full
-all-in-one-batch run destabilises once any module is absent — so running *everything* on PyPy yields a
-misleading all-red rather than signal. For reference, the **full** suite is healthy on CPython with all
-deps present — **951 passed / 9 failed** (`uv run pytest`, CPython 3.11, verified 2026-07-19).
+**Three tests are excluded on both interpreters** because they assert **CPython-only semantics** and
+cannot pass on PyPy *by design* — the two `test_no_cyclic_references_*` tests rely on CPython
+refcounting to free acyclic garbage synchronously (PyPy has no refcounting), and one test asserts
+CPython's exact `pickle`-error wording. A fix is proposed upstream in
+[**evnchn/nicegui#210**](https://github.com/evnchn/nicegui/pull/210) (`skipif`-PyPy + a wider regex);
+once it lands, the tracker runs them again automatically. Excluding them keeps the PyPy-vs-CPython
+comparison to *portable* behaviour.
+
+**Scope.** The subset covers NiceGUI's core browser-element rendering + Python API — not the whole
+suite: a few modules need `pandas`/`polars`, which **can't run on PyPy** (see the test-dependency table
+below), and NiceGUI's full all-in-one-batch run destabilises once any module is absent. For reference,
+the **full** suite is healthy on CPython with all deps present — **951 passed / 9 failed** (`uv run
+pytest`, CPython 3.11, verified 2026-07-19).
 
 ## Latest result
 
 <!-- COMPAT:START -->
-| Target | NiceGUI | Install | Boot | Core tests |
-|--------|---------|---------|------|------------|
-| `pypy3.10` · pypi | `3.14.0` | ❌ (watchfiles) | — | — |
-| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 315✅ 3❌ 2💥 · **≈ CPython ✓** |
-| CPython 3.11 *(control)* · pypi | `3.14.0` | ✅ | ✅ | 317✅ 1❌ 1💥 |
-| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (watchfiles) | — | — |
-| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 325✅ 3❌ 2💥 · **≈ CPython ✓** |
-| CPython 3.11 *(control)* · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 327✅ 1❌ 1💥 |
-
-_Last run: 2026-07-19T07:53:33Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
+_⏳ Refreshing — 3 CPython-only tests now deselected (fix proposed [#210](https://github.com/evnchn/nicegui/pull/210)); next run will populate (expected: PyPy 3.11 ≈ CPython, both green)._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
@@ -61,6 +57,22 @@ NiceGUI is pure-Python, but its dependency tree includes packages backed by **Ru
 Upstream NiceGUI has **no PyPy CI** — only the two exclusion markers above. So this tracker genuinely
 breaks new ground rather than mirroring an existing pipeline.
 
+## Test-dependency PyPy support (what gates the *test* coverage)
+
+NiceGUI's runtime installs on PyPy 3.11; what limits how much of the **test suite** can run is whether
+its optional integration deps work on PyPy (all verified on PyPy 3.11, 2026-07-19):
+
+| Dep | On PyPy 3.11 | Effect on the tracker |
+|-----|--------------|-----------------------|
+| `numpy` | ✅ works (2.4.x wheel) | in the harness; numpy-using tests run |
+| `matplotlib` | ✅ works (3.11.x, imports clean) | no PyPy blocker (the one `ui.pyplot` test is excluded for an unrelated refcounting reason, see #210) |
+| `pandas` | ❌ **`import pandas` → SIGSEGV** (exit 139) | blocks `test_table`/`test_aggrid`/`test_altair`; **upstream *pandas* bug**, not NiceGUI's |
+| `polars` | ❌ no PyPy wheel | blocks polars-path tests; upstream *polars* |
+
+So "getting the rest working" is mostly done — numpy and matplotlib already run; only `pandas`- and
+`polars`-dependent tests are out, and both are upstream-library limits (a pandas SIGSEGV on PyPy, and a
+missing polars wheel) that neither this repo nor NiceGUI can fix.
+
 ## What each run does
 
 For every matrix cell — **{PyPy 3.10, PyPy 3.11, CPython 3.11 *(control)*} × {latest PyPI release,
@@ -77,8 +89,9 @@ counts against PyPy's separates genuine PyPy-specific failures from harness/orde
    webdriver-manager) and run a curated subset of NiceGUI's own tests: **real Selenium/Chrome browser
    tests** for core elements (`test_label`, `test_button`, `test_input`, `test_element`, …) **plus**
    `user`/unit tests. Chrome is available on the runner. The subset excludes the few modules needing
-   PyPy-incompatible deps and those that destabilise NiceGUI's full one-batch run. Counts are
-   passed / failed / skipped. *(Why not the whole suite: see the Verdict's scope note.)*
+   PyPy-incompatible deps, and **deselects 3 CPython-only-semantics tests** (see the Verdict — fix in
+   [#210](https://github.com/evnchn/nicegui/pull/210)). Counts are passed / failed / skipped.
+   *(Why not the whole suite: see the Verdict's scope note.)*
 
 A PyPy incompatibility is recorded as **data** (which stage, which dependency, a log tail) — the
 per-cell runner always succeeds, so the workflow's own green/red means "the tracker ran", while the
