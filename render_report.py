@@ -128,9 +128,9 @@ def render_matrix(cells):
               '|--------|---------|---------|------|------------|')
     stamp = f'\n\n_Last run: {generated or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())} · '
     stamp += 'Install = NiceGUI runtime · Boot = import + server + HTTP probe · '
-    stamp += "Core tests = NiceGUI's own browser-free `user`/unit tests (the full suite, incl. "
-    stamp += 'Selenium browser tests, needs pandas/matplotlib/etc. that don\'t run on PyPy — see '
-    stamp += 'README). The **CPython 3.11 control** runs the identical subset for comparison._'
+    stamp += "Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element "
+    stamp += 'tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that '
+    stamp += "don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._"
     return header + '\n' + '\n'.join(rows) + stamp
 
 

@@ -44,20 +44,25 @@ DEP_HINTS = ['pydantic-core', 'pydantic_core', 'watchfiles', 'orjson', 'lxml',
 # Deps for the browser-free core subset (pytest-selenium/selenium are needed only
 # so the repo's `--driver Chrome` addopt parses — no browser is actually launched).
 TEST_DEPS = ['pytest', 'pytest-asyncio', 'pytest-order', 'pytest-selenium',
-             'selenium', 'requests', 'httpx', 'httpx2', 'numpy']
+             'selenium', 'webdriver-manager', 'requests', 'httpx', 'httpx2', 'numpy']
 
-# Curated browser-free subset of NiceGUI's own tests (the `user`-fixture / unit
-# tests). These run WITHOUT a browser and WITHOUT the heavy integration deps
-# (pandas/matplotlib/polars) that don't work on PyPy, so they exercise NiceGUI's
-# Python API on PyPy deterministically. The full suite (incl. Selenium browser
-# tests) needs those deps and is only runnable on CPython — see README.
+# Curated subset of NiceGUI's own tests that runs on PyPy: real Selenium/Chrome
+# **browser** tests (the `screen` fixture — the whole point: the browser side is
+# exercised so devs don't hand-test it) PLUS the browser-free `user`/unit tests.
+# It deliberately excludes the handful of modules needing PyPy-incompatible deps
+# (pandas/matplotlib/altair) and the few modules that destabilise NiceGUI's full
+# in-one-batch run. The complete suite is only runnable on CPython (see README).
 CORE_TESTS = [
-    'tests/test_element_filter.py',
-    'tests/test_forwarded_prefix.py',
-    'tests/test_markdown_response.py',
-    'tests/test_run.py',
-    'tests/test_sub_pages_match_path.py',
-    'tests/test_user_simulation_context.py',
+    # browser (Selenium/Chrome, `screen` fixture) — core element rendering
+    'tests/test_label.py', 'tests/test_link.py', 'tests/test_button.py',
+    'tests/test_element.py', 'tests/test_html.py', 'tests/test_markdown.py',
+    'tests/test_chip.py', 'tests/test_input.py', 'tests/test_number.py',
+    'tests/test_select.py', 'tests/test_notification.py', 'tests/test_card.py',
+    'tests/test_tooltip.py',
+    # browser-free `user`/unit
+    'tests/test_element_filter.py', 'tests/test_forwarded_prefix.py',
+    'tests/test_markdown_response.py', 'tests/test_run.py',
+    'tests/test_sub_pages_match_path.py', 'tests/test_user_simulation_context.py',
     'tests/test_user_simulation.py',
 ]
 

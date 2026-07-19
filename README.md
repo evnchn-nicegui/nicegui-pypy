@@ -4,44 +4,38 @@
 [![tracker](https://github.com/evnchn-nicegui/nicegui-pypy/actions/workflows/compat.yml/badge.svg)](https://github.com/evnchn-nicegui/nicegui-pypy/actions/workflows/compat.yml)
 
 An **independent, automated tracker** that checks whether [NiceGUI](https://github.com/zauberzeug/nicegui)
-installs and boots under **[PyPy](https://pypy.org/)** — the JIT Python interpreter — and runs NiceGUI's
-own **browser-free core tests** on PyPy against a **CPython 3.11 control** run the same way. It runs
-daily on GitHub Actions (free/unlimited for public repos) and writes the matrix back into this README.
-**Target: PyPy 3.11+.**
+installs and boots under **[PyPy](https://pypy.org/)** — the JIT Python interpreter — and runs a subset
+of NiceGUI's own tests, **including real Selenium/Chrome browser tests**, on PyPy against a **CPython
+3.11 control** run the same way. It runs daily on GitHub Actions (free/unlimited for public repos) and
+writes the matrix back into this README. **Target: PyPy 3.11+.**
 
 > Not affiliated with the NiceGUI project. Runs *NiceGUI's own* test files, unmodified.
 
 ## Verdict
 
-- ✅ **PyPy 3.11 — works.** NiceGUI installs, boots, and passes its browser-free core test subset
-  **at parity with CPython 3.11** (`≈ CPython ✓` in the matrix). The only difference found is one
-  trivially-cosmetic test — PyPy's `pickle` error message for a local function differs in wording — so
-  there is **no functional PyPy-specific regression** in what runs on PyPy.
+- ✅ **PyPy 3.11 — works, browser included.** NiceGUI installs, boots, and passes its core test subset
+  — **real Selenium/Chrome browser tests** (the whole point: the rendered Vue/socket.io side is
+  exercised, not just Python-simulated) plus `user`/unit tests — **at parity with CPython 3.11**
+  (`≈ CPython ✓`). The only differences are a **handful of genuine PyPy semantics**: PyPy has no
+  refcounting, so a couple of "object is collected immediately after delete" tests don't hold, and a
+  `pickle` error message is worded differently. No functional rendering regression.
 - ❌ **PyPy 3.10 — does not install.** Install fails at `watchfiles` (no PyPy-3.10 wheel, source build
   fails); `pydantic-core` also ships no `pp310` wheels. Upstream wheel-availability limit, not fixable
   here. Not sugar-coated: 3.10 is a hard no.
 
-**Scope — what "core tests" means, honestly.** NiceGUI's **full** test suite (its Selenium browser
-tests + tests needing `pandas`/`matplotlib`/`polars`) **cannot run on PyPy**: those are *test/dev*
-dependencies that don't support PyPy (`pandas`/`matplotlib` segfault PyPy on import; `polars` has no
-PyPy wheel). That is a limitation of the **test tooling**, not of NiceGUI at runtime. So this tracker
-runs the browser-free `user`/unit subset that *does* run on PyPy. For reference, the full suite **is**
-healthy on CPython with those deps present — **951 passed / 9 failed** (`uv run pytest`, CPython 3.11,
-verified 2026-07-19) — it just can't be executed on PyPy.
+**Scope — honestly, what is and isn't covered.** The subset covers NiceGUI's core browser element
+rendering + Python API. It does **not** cover the whole suite: a few test modules need
+`pandas`/`matplotlib`/`altair` (which `segfault`/don't install on PyPy), and NiceGUI's full
+all-in-one-batch run destabilises once any module is absent — so running *everything* on PyPy yields a
+misleading all-red rather than signal. For reference, the **full** suite is healthy on CPython with all
+deps present — **951 passed / 9 failed** (`uv run pytest`, CPython 3.11, verified 2026-07-19).
 
 ## Latest result
 
 <!-- COMPAT:START -->
-| Target | NiceGUI | Install | Boot | Core tests |
-|--------|---------|---------|------|------------|
-| `pypy3.10` · pypi | `3.14.0` | ❌ (watchfiles) | — | — |
-| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 173✅ 1❌ 1💥 · **≈ CPython ✓** |
-| CPython 3.11 *(control)* · pypi | `3.14.0` | ✅ | ✅ | 174✅ |
-| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (watchfiles) | — | — |
-| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 183✅ 1❌ 1💥 · **≈ CPython ✓** |
-| CPython 3.11 *(control)* · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 184✅ |
-
-_Last run: 2026-07-18T21:55:05Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own browser-free `user`/unit tests (the full suite, incl. Selenium browser tests, needs pandas/matplotlib/etc. that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset for comparison._
+_⏳ Refreshing — the core subset now includes real Selenium/Chrome browser tests; the next run will
+populate this matrix (expected: PyPy 3.11 ≈ CPython 3.11, minus a few genuine-PyPy diffs; PyPy 3.10
+install ❌)._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
@@ -72,12 +66,12 @@ counts against PyPy's separates genuine PyPy-specific failures from harness/orde
    headline "does it install?" signal; build failures capture the offending package. (Kept separate
    from the test-env build below so a slow/failing dev-dep build can't hide it.)
 3. **smoke** — `import nicegui`, start a real `ui.run()` server, and HTTP-probe the index page.
-4. **core tests** — install a light harness (pytest + asyncio/order/selenium plugins, httpx2) and run
-   NiceGUI's **browser-free `user`/unit test subset** (`tests/test_user_simulation*.py`,
-   `test_run.py`, `test_element_filter.py`, …). These need no browser and none of the PyPy-incompatible
-   integration deps, so they run deterministically on PyPy. Counts are passed / failed / skipped.
-   *(Why not the full suite: see the Verdict's scope note — the browser + pandas/matplotlib tests can't
-   run on PyPy at all, so running them would only produce a misleading all-red result.)*
+4. **core tests** — install a light harness (pytest + asyncio/order/selenium plugins, httpx2,
+   webdriver-manager) and run a curated subset of NiceGUI's own tests: **real Selenium/Chrome browser
+   tests** for core elements (`test_label`, `test_button`, `test_input`, `test_element`, …) **plus**
+   `user`/unit tests. Chrome is available on the runner. The subset excludes the few modules needing
+   PyPy-incompatible deps and those that destabilise NiceGUI's full one-batch run. Counts are
+   passed / failed / skipped. *(Why not the whole suite: see the Verdict's scope note.)*
 
 A PyPy incompatibility is recorded as **data** (which stage, which dependency, a log tail) — the
 per-cell runner always succeeds, so the workflow's own green/red means "the tracker ran", while the
@@ -93,14 +87,13 @@ python3 render_report.py --in results --readme README.md --badge badge.json
 
 ## Status & roadmap
 
-- **Done:** daily tracker; PyPy 3.11 installs + boots + passes the browser-free core subset at parity
-  with CPython 3.11 (one cosmetic `pickle`-message diff); PyPy 3.10 confirmed unsupported; full suite
-  confirmed healthy on CPython (951/9) and confirmed un-runnable on PyPy (test-dep limitation).
-- **Possible next (if PyPy test tooling improves):** widen the core subset as more of NiceGUI's
-  integration-test deps gain PyPy support; add browser tests if a PyPy-compatible Selenium/driver path
-  becomes viable.
+- **Done:** daily tracker; PyPy 3.11 installs + boots + passes a browser-inclusive core subset (real
+  Selenium/Chrome) at parity with CPython 3.11 (only genuine-PyPy diffs: GC/refcount, `pickle` message);
+  PyPy 3.10 confirmed unsupported; full suite confirmed healthy on CPython (951/9).
+- **Possible next:** widen the browser subset toward the full element set as it proves stable on PyPy;
+  pull in more modules if their deps (`pandas`/`matplotlib`/`polars`) ever gain PyPy support.
 - **Not actionable here:** PyPy 3.10 support depends on `watchfiles`/`pydantic-core` shipping `pp310`
-  wheels; full-suite-on-PyPy depends on `pandas`/`matplotlib`/`polars` supporting PyPy — all upstream.
+  wheels; the pandas/matplotlib-class test modules depend on those libs supporting PyPy — all upstream.
 
 ## License
 
