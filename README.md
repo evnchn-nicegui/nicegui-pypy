@@ -33,9 +33,16 @@ deps present — **951 passed / 9 failed** (`uv run pytest`, CPython 3.11, verif
 ## Latest result
 
 <!-- COMPAT:START -->
-_⏳ Refreshing — the core subset now includes real Selenium/Chrome browser tests; the next run will
-populate this matrix (expected: PyPy 3.11 ≈ CPython 3.11, minus a few genuine-PyPy diffs; PyPy 3.10
-install ❌)._
+| Target | NiceGUI | Install | Boot | Core tests |
+|--------|---------|---------|------|------------|
+| `pypy3.10` · pypi | `3.14.0` | ❌ (watchfiles) | — | — |
+| `pypy3.11` · pypi | `3.14.0` | ✅ | ✅ | 1💥 |
+| CPython 3.11 *(control)* · pypi | `3.14.0` | ✅ | ✅ | 1💥 |
+| `pypy3.10` · main | `main` (`d1cf251711c7`) | ❌ (watchfiles) | — | — |
+| `pypy3.11` · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 1💥 |
+| CPython 3.11 *(control)* · main | `main` (`d1cf251711c7`) | ✅ | ✅ | 1💥 |
+
+_Last run: 2026-07-19T06:52:15Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
