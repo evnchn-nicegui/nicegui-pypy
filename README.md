@@ -47,7 +47,7 @@ pytest`, CPython 3.11, verified 2026-07-19).
 | `pypy3.11` · main | `main` (`824bb9a77b7b`) | ✅ | ✅ | 367✅ 1❌ · **≈ CPython ✓** |
 | CPython 3.11 *(control)* · main | `main` (`824bb9a77b7b`) | ✅ | ✅ | 367✅ 1❌ |
 
-_Last run: 2026-11-03T13:05:16Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
+_Last run: 2026-11-04T13:20:44Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
