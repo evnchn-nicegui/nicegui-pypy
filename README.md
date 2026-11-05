@@ -40,14 +40,14 @@ pytest`, CPython 3.11, verified 2026-07-19).
 <!-- COMPAT:START -->
 | Target | NiceGUI | Install | Boot | Core tests |
 |--------|---------|---------|------|------------|
-| `pypy3.10` · pypi | `3.19.0` | ❌ (watchfiles) | — | — |
-| `pypy3.11` · pypi | `3.19.0` | ✅ | ✅ | 367✅ 1❌ · **≈ CPython ✓** |
-| CPython 3.11 *(control)* · pypi | `3.19.0` | ✅ | ✅ | 367✅ 1❌ |
-| `pypy3.10` · main | `main` (`824bb9a77b7b`) | ❌ (watchfiles) | — | — |
-| `pypy3.11` · main | `main` (`824bb9a77b7b`) | ✅ | ✅ | 367✅ 1❌ · **≈ CPython ✓** |
-| CPython 3.11 *(control)* · main | `main` (`824bb9a77b7b`) | ✅ | ✅ | 367✅ 1❌ |
+| `pypy3.10` · pypi | `4.0.0` | ❌ | — | — |
+| `pypy3.11` · pypi | `4.0.0` | ✅ | ✅ | 374✅ 1❌ · **≈ CPython ✓** |
+| CPython 3.11 *(control)* · pypi | `4.0.0` | ✅ | ✅ | 375✅ |
+| `pypy3.10` · main | `main` (`69edb3faa8e7`) | ❌ | — | — |
+| `pypy3.11` · main | `main` (`69edb3faa8e7`) | ✅ | ✅ | 375✅ · **≈ CPython ✓** |
+| CPython 3.11 *(control)* · main | `main` (`69edb3faa8e7`) | ✅ | ✅ | 375✅ |
 
-_Last run: 2026-11-04T13:20:44Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
+_Last run: 2026-11-05T13:34:04Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
