@@ -41,13 +41,13 @@ pytest`, CPython 3.11, verified 2026-07-19).
 | Target | NiceGUI | Install | Boot | Core tests |
 |--------|---------|---------|------|------------|
 | `pypy3.10` · pypi | `4.1.0` | ❌ | — | — |
-| `pypy3.11` · pypi | `4.1.0` | ✅ | ✅ | 395✅ 1❌ · **≈ CPython ✓** |
+| `pypy3.11` · pypi | `4.1.0` | ✅ | ✅ | 396✅ · **≈ CPython ✓** |
 | CPython 3.11 *(control)* · pypi | `4.1.0` | ✅ | ✅ | 396✅ |
 | `pypy3.10` · main | `main` (`8104d5a43ca0`) | ❌ | — | — |
 | `pypy3.11` · main | `main` (`8104d5a43ca0`) | ✅ | ✅ | 394✅ 2❌ · **≈ CPython ✓** |
 | CPython 3.11 *(control)* · main | `main` (`8104d5a43ca0`) | ✅ | ✅ | 396✅ |
 
-_Last run: 2026-11-27T15:41:18Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
+_Last run: 2026-11-28T14:37:43Z · Install = NiceGUI runtime · Boot = import + server + HTTP probe · Core tests = NiceGUI's own suite subset — real **Selenium/Chrome browser** element tests + `user`/unit tests (the full suite also needs pandas/matplotlib-class deps that don't run on PyPy — see README). The **CPython 3.11 control** runs the identical subset._
 <!-- COMPAT:END -->
 
 ## Why this is not trivial
